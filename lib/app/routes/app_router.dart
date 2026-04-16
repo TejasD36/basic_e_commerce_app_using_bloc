@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/view/login_view.dart';
 import '../../features/cart/presentation/view/cart_view.dart';
-import '../../features/product_details/presentation/view/product_details_view.dart';
+import '../../features/products/presentation/view/product_details_view.dart';
 import 'navigation_service.dart';
 import 'route_name.dart';
 
