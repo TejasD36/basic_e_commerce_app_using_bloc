@@ -12,7 +12,17 @@ dependencies:
   flutter:
     sdk: flutter
 
+  cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.8
+  equatable: ^2.0.8
+  flutter_animate: ^4.5.2
+  flutter_bloc: ^9.1.1
+  get_it: ^9.2.1
+  go_router: ^17.2.1
+  hive_ce: ^2.19.3
+  hive_ce_flutter: ^2.3.4
+  path_provider: ^2.1.5
+  skeletonizer: ^2.1.3
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
-class ProductsListView extends StatelessWidget {
-  const ProductsListView({super.key});
+class ProductsView extends StatelessWidget {
+  const ProductsView({super.key});
 
   @override
   Widget build(BuildContext context) {
