@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../cart/domain/entities/cart_item.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
@@ -19,7 +20,7 @@ class _ProductDetailsViewState extends State<ProductDetailsView> {
   Product? _product;
   bool _isLoading = true;
   String? _error;
-  int _quantity = 1;
+  int _quantity = 0;
 
   @override
   void initState() {
@@ -30,13 +31,23 @@ class _ProductDetailsViewState extends State<ProductDetailsView> {
   Future<void> _loadProduct() async {
     try {
       final repository = context.read<ProductRepository>();
-
       final product = await repository.getProductById(widget.productId);
 
       if (!mounted) return;
 
+      final cartState = context.read<CartBloc>().state;
+
+      int initialQuantity = 0;
+
+      if (cartState is CartLoaded) {
+        final existingItem = cartState.items.cast<CartItem?>().firstWhere((item) => item?.product.id == product.id, orElse: () => null);
+
+        initialQuantity = existingItem?.quantity ?? 0;
+      }
+
       setState(() {
         _product = product;
+        _quantity = product.inStock ? (initialQuantity == 0 ? 1 : initialQuantity) : 0;
         _isLoading = false;
       });
     } catch (e) {
@@ -50,27 +61,56 @@ class _ProductDetailsViewState extends State<ProductDetailsView> {
   }
 
   void _incrementQuantity() {
+    if (_product == null || !_product!.inStock) return;
     if (_quantity >= 10) return;
 
     setState(() {
       _quantity++;
     });
+
+    _syncCart();
   }
 
   void _decrementQuantity() {
-    if (_quantity <= 1) return;
+    if (_product == null || !_product!.inStock) return;
+
+    if (_quantity <= 1) {
+      setState(() {
+        _quantity = 0;
+      });
+
+      context.read<CartBloc>().add(RemoveItem(_product!.id));
+
+      return;
+    }
 
     setState(() {
       _quantity--;
     });
+
+    _syncCart();
+  }
+
+  void _syncCart() {
+    if (_product == null) return;
+
+    if (_quantity <= 0) {
+      context.read<CartBloc>().add(RemoveItem(_product!.id));
+    } else {
+      context.read<CartBloc>().add(UpdateQuantity(productId: _product!.id, quantity: _quantity));
+    }
   }
 
   void _addToCart() {
-    if (_product == null) return;
+    if (_product == null || !_product!.inStock) return;
+
+    setState(() {
+      _quantity = _quantity <= 0 ? 1 : _quantity;
+    });
 
     context.read<CartBloc>().add(AddItem(product: _product!, quantity: _quantity));
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${_product!.title} x$_quantity added to cart')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${_product!.title} added to cart')));
   }
 
   @override
@@ -180,13 +220,19 @@ class _ProductDetailsViewState extends State<ProductDetailsView> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      IconButton.filledTonal(onPressed: _decrementQuantity, icon: const Icon(Icons.remove)),
+                      IconButton.filledTonal(
+                        onPressed: product.inStock && _quantity > 0 ? _decrementQuantity : null,
+                        icon: const Icon(Icons.remove),
+                      ),
                       Container(
                         width: 56,
                         alignment: Alignment.center,
-                        child: Text(_quantity.toString(), style: theme.textTheme.titleLarge),
+                        child: Text(product.inStock ? _quantity.toString() : '-', style: theme.textTheme.titleLarge),
                       ),
-                      IconButton.filled(onPressed: _incrementQuantity, icon: const Icon(Icons.add)),
+                      IconButton.filled(
+                        onPressed: product.inStock ? (_quantity == 0 ? _addToCart : _incrementQuantity) : null,
+                        icon: Icon(_quantity == 0 ? Icons.shopping_cart_outlined : Icons.add),
+                      ),
                     ],
                   ),
                 ],

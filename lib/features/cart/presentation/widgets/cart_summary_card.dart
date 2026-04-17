@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routes/route_name.dart';
 import '../bloc/cart_bloc.dart';
 
 class CartSummaryCard extends StatelessWidget {
@@ -45,7 +48,16 @@ class CartSummaryCard extends StatelessWidget {
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(onPressed: () {}, child: const Text('Checkout')),
+              child: ElevatedButton(
+                onPressed: () {
+                  context.read<CartBloc>().add(const ClearCart());
+
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order placed successfully')));
+
+                  context.go(AppRoute.products.path);
+                },
+                child: const Text('Checkout'),
+              ),
             ),
           ],
         ),

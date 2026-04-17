@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routes/route_name.dart';
+import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../bloc/product_bloc.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_sort_dropdown.dart';
@@ -72,6 +75,37 @@ class _ProductsViewState extends State<ProductsView> {
             return const SizedBox.shrink();
           },
         ),
+      ),
+      floatingActionButton: BlocBuilder<CartBloc, CartState>(
+        builder: (context, state) {
+          final itemCount = state is CartLoaded ? state.items.fold<int>(0, (sum, item) => sum + item.quantity) : 0;
+
+          return FloatingActionButton.extended(
+            onPressed: () {
+              context.push(AppRoute.cart.path);
+            },
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.shopping_cart_outlined),
+                if (itemCount > 0)
+                  Positioned(
+                    top: -6,
+                    right: -10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.error, borderRadius: BorderRadius.circular(20)),
+                      child: Text(
+                        itemCount > 99 ? '99+' : '$itemCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: const Text('Cart'),
+          );
+        },
       ),
     );
   }
