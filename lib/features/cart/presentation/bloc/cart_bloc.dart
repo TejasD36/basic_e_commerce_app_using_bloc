@@ -3,12 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../products/domain/entities/product.dart';
 import '../../domain/entities/cart_item.dart';
+import '../../domain/repositories/cart_repository.dart';
 
 part 'cart_event.dart';
 part 'cart_state.dart';
 
 class CartBloc extends Bloc<CartEvent, CartState> {
-  CartBloc() : super(const CartLoaded()) {
+  final CartRepository repository;
+
+  CartBloc(this.repository) : super(const CartLoaded()) {
     on<LoadCart>(_onLoadCart);
     on<AddItem>(_onAddItem);
     on<RemoveItem>(_onRemoveItem);
@@ -18,48 +21,82 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
   final List<CartItem> _items = [];
 
-  void _onLoadCart(LoadCart event, Emitter<CartState> emit) {
-    emit(_buildLoadedState());
-  }
+  Future<void> _onLoadCart(LoadCart event, Emitter<CartState> emit) async {
+    try {
+      final savedItems = await repository.getCartItems();
 
-  void _onAddItem(AddItem event, Emitter<CartState> emit) {
-    final existingIndex = _items.indexWhere((item) => item.product.id == event.product.id);
+      _items
+        ..clear()
+        ..addAll(savedItems);
 
-    if (existingIndex != -1) {
-      final existingItem = _items[existingIndex];
-
-      _items[existingIndex] = existingItem.copyWith(quantity: (existingItem.quantity + event.quantity).clamp(1, 10));
-    } else {
-      _items.add(CartItem(product: event.product, quantity: event.quantity));
+      emit(_buildLoadedState());
+    } catch (e) {
+      emit(CartError(e.toString()));
     }
-
-    emit(_buildLoadedState());
   }
 
-  void _onRemoveItem(RemoveItem event, Emitter<CartState> emit) {
-    _items.removeWhere((item) => item.product.id == event.productId);
+  Future<void> _onAddItem(AddItem event, Emitter<CartState> emit) async {
+    try {
+      final existingIndex = _items.indexWhere((item) => item.product.id == event.product.id);
 
-    emit(_buildLoadedState());
-  }
+      if (existingIndex != -1) {
+        final existingItem = _items[existingIndex];
 
-  void _onUpdateQuantity(UpdateQuantity event, Emitter<CartState> emit) {
-    final index = _items.indexWhere((item) => item.product.id == event.productId);
+        _items[existingIndex] = existingItem.copyWith(quantity: (existingItem.quantity + event.quantity).clamp(1, 10));
+      } else {
+        _items.add(CartItem(product: event.product, quantity: event.quantity));
+      }
 
-    if (index == -1) return;
+      await repository.saveCartItems(_items);
 
-    if (event.quantity <= 0) {
-      _items.removeAt(index);
-    } else {
-      _items[index] = _items[index].copyWith(quantity: event.quantity.clamp(1, 10));
+      emit(_buildLoadedState());
+    } catch (e) {
+      emit(CartError(e.toString()));
     }
-
-    emit(_buildLoadedState());
   }
 
-  void _onClearCart(ClearCart event, Emitter<CartState> emit) {
-    _items.clear();
+  Future<void> _onRemoveItem(RemoveItem event, Emitter<CartState> emit) async {
+    try {
+      _items.removeWhere((item) => item.product.id == event.productId);
 
-    emit(const CartLoaded());
+      await repository.saveCartItems(_items);
+
+      emit(_buildLoadedState());
+    } catch (e) {
+      emit(CartError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateQuantity(UpdateQuantity event, Emitter<CartState> emit) async {
+    try {
+      final index = _items.indexWhere((item) => item.product.id == event.productId);
+
+      if (index == -1) return;
+
+      if (event.quantity <= 0) {
+        _items.removeAt(index);
+      } else {
+        _items[index] = _items[index].copyWith(quantity: event.quantity.clamp(1, 10));
+      }
+
+      await repository.saveCartItems(_items);
+
+      emit(_buildLoadedState());
+    } catch (e) {
+      emit(CartError(e.toString()));
+    }
+  }
+
+  Future<void> _onClearCart(ClearCart event, Emitter<CartState> emit) async {
+    try {
+      _items.clear();
+
+      await repository.clearCart();
+
+      emit(const CartLoaded());
+    } catch (e) {
+      emit(CartError(e.toString()));
+    }
   }
 
   CartLoaded _buildLoadedState() {

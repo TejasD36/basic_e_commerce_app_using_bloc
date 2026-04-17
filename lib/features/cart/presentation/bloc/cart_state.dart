@@ -20,3 +20,12 @@ class CartLoaded extends CartState {
   @override
   List<Object?> get props => [items, subtotal, tax, total];
 }
+
+class CartError extends CartState {
+  final String message;
+
+  const CartError(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
